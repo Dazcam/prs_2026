@@ -1,0 +1,33 @@
+snakefile: Snakefile
+cores: 1
+use-conda: True
+use-envmodules: True
+conda-frontend: conda
+use-singularity: True
+singularity-args: "--bind /shared/scratch/SCWF00021/"
+keep-going: True
+jobs: 5
+rerun-incomplete: True
+#restart-times: 1
+printshellcmds: True
+executor: cluster-generic
+cluster-generic-submit-cmd:
+#cluster:
+  mkdir -p ../results/00LOG/smk-logfiles &&
+  sbatch
+    --ntasks={resources.ntasks}
+    --mem={resources.mem_mb}
+    --time={resources.time}
+    --cpus-per-task={resources.threads}
+    --job-name=smk-{rule}
+    --output=../results/00LOG/smk-logfiles/{rule}.%j.out
+    --error=../results/00LOG/smk-logfiles/{rule}.%j.err
+    --account=SCWF00021_n_bray_19
+    --partition=htc_genoa
+
+default-resources:
+  - ntasks=1
+  - mem_mb=5000
+  - time="1-00:00:00"
+  - threads=1
+  - partition="htc_genoa"
