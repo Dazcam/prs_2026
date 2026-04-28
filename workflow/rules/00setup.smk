@@ -43,7 +43,7 @@ rule create_prscs_env:
         """
 
 rule get_gene_lookup:
-     output: ancient("../resources/sheets/gene_lookup_hg38.tsv")
+     output: "../resources/sheets/gene_lookup_hg38.tsv"
      singularity: "../resources/containers/r_eqtl.sif"
      log:    "../results/00LOG/00SETUP/get_gene_lookup.log"
      run:
