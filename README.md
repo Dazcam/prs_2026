@@ -1,6 +1,6 @@
 # SCZ Polygenic Risk Score | Developing Human Brain
 
-> **Polygenic risk score analysis of schizophrenia GWAS in prenatal human cerebral cortex**  
+> **Polygenic risk score analysis of schizophrenia GWAS in cell types of the prenatal human brain**  
 > Cardiff University · Division of Psychological Medicine and Clinical Neurosciences  
 > 2026
 
