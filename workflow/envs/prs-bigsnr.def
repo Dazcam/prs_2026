@@ -1,0 +1,54 @@
+Bootstrap: docker
+From: bioconductor/bioconductor_docker
+
+%post
+    # Prevent interactive prompts during build
+    export DEBIAN_FRONTEND=noninteractive
+    export TZ=Etc/UTC
+
+    # Install system dependencies required for R packages
+    apt-get update && apt-get install -y \
+        libcurl4-openssl-dev \
+        libssl-dev \
+        libxml2-dev \
+        libfontconfig1-dev \
+        libcairo2-dev \
+        libxt-dev \
+        wget \
+        unzip \
+        && apt-get clean \
+        && rm -rf /var/lib/apt/lists/*
+
+
+    # ------------------------------
+    # Install R packages
+    # ------------------------------
+    # Install tidyverse and remotes
+    R -e "install.packages(c('tidyverse', 'remotes'), repos='https://cloud.r-project.org/')"
+
+    # Install visualisation packages
+    R -e "install.packages(c('knitr', 'DT', 'viridis', 'cowplot', 'rmarkdown', 'glue', 'kableExtra', 'gt', 'gtExtras','qvalue','UpSetR','patchwork','ggrepel'), repos='https://cloud.r-project.org/')"
+
+    # Install bigsnpr from GitHub
+    R -e "remotes::install_github('privefl/bigsnpr')"
+
+    # ------------------------------
+    # Install PLINK (v1.9)
+    # ------------------------------
+    cd /usr/local/bin
+    wget https://s3.amazonaws.com/plink1-assets/dev/plink_linux_x86_64.zip
+    unzip plink_linux_x86_64.zip
+    rm plink_linux_x86_64.zip
+    chmod +x plink
+    # Verify
+    plink --version
+
+%environment
+    export PATH=/usr/local/bin:$PATH
+
+%runscript
+    exec R "$@"
+
+%labels
+    Maintainer: Dazcam
+    Description: Singularity container with R packages, inc bigsnpr, and PLINK for PRS analysis

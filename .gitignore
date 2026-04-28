@@ -1,1 +1,4 @@
 results/
+resources/
+.cache/
+.snakemake/

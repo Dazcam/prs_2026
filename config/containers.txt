@@ -1,0 +1,2 @@
+# Format: <URI> <output_path>
+oras://quay.io/dazcam1/prs-bigsnpr ../resources/containers/prs-bigsnpr.sif

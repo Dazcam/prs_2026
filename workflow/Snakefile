@@ -1,0 +1,19 @@
+configfile: '../config/config.yaml'
+
+#include: "rules/01prs.smk"
+#include: "rules/02prs_expression.smk"
+include: "rules/03gsea.smk"
+
+rule all:
+    input:
+#        expand("../results/01PRS/prscs/scz_pst_eff_a1_b0.5_phiauto_chr{chr}.txt", chr = range(1,23)),
+#        "../results/01PRS/prscs/scz_prscs_weights_all.txt",
+#        "../results/01PRS/prscs_score.profile"
+#         expand("../results/02PRS_EXPR/limma/{cell_type}_fit.rds", cell_type = config['cell_types'])
+#        "../results/02PRS_EXPR/limma/all_cell_types_results.tsv",
+#        expand("../results/03GSEA/{cell_type}_gsea.rds", cell_type = config['cell_types']),
+         "../results/03GSEA/all_cell_types_gsea.tsv",
+         "../results/03GSEA/gsea_report.html"
+#        "../results/02PRS_EXPR/prs_standardised.tsv",
+#        "../results/02PRS_EXPR/covariates.tsv",
+#        "../results/02PRS_EXPR/expression/Glu-UL_filtered.tsv"
