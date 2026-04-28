@@ -12,7 +12,7 @@
 
 This repository computes polygenic risk scores (PRS) for schizophrenia in 118 European samples with prenatal brain single-nucleus RNA sequencing data, and tests whether genetic risk load correlates with cell-type-specific gene expression across 19 brain cell types.
 
-PRS are derived from the PGC3 schizophrenia GWAS (European subset) using PRS-CS-auto. Association testing between PRS and pseudobulk gene expression is performed per cell type using linear models. Gene set enrichment analysis is then used to identify biological pathways and cell type signatures enriched among PRS-associated genes.
+PRS are derived from the PGC3 schizophrenia GWAS (European subset) using PRS-CS-auto. Association testing between PRS and pseudobulk gene expression is performed per cell type using linear models. Gene set enrichment analysis is then used to identify biological pathways enriched among PRS-associated genes.
 
 ## Pipeline overview
 
