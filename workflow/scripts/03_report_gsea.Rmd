@@ -1,0 +1,327 @@
+---
+title: "SCZ PRS — Gene Set Enrichment Analysis"
+subtitle: "Developing Human Cerebral Cortex"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  html_document:
+    theme: flatly
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    number_sections: false
+    code_folding: hide
+    self_contained: true
+params:
+  gsea_file:  "../results/03GSEA/all_cell_types_gsea.tsv"
+  limma_file: "../results/02PRS_EXPR/limma/all_cell_types_results.tsv"
+  fdr_thr:    0.05
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo    = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width  = 10,
+  fig.height = 7
+)
+
+library(tidyverse)
+library(gt)
+library(gtExtras)
+library(ggplot2)
+library(patchwork)
+library(ggrepel)
+library(knitr)
+library(kableExtra)
+
+gsea  <- read_tsv(params$gsea_file,  show_col_types = FALSE)
+limma <- read_tsv(params$limma_file, show_col_types = FALSE)
+fdr_thr <- params$fdr_thr
+
+l1_cell_types <- c("Endo-Peri", "GABA", "Glu-DL", "Glu-UL", "MG", "NPC", "OPC")
+l2_cell_types <- setdiff(unique(gsea$cell_type), l1_cell_types)
+
+truncate_leading_edge <- function(x, n = 10) {
+  genes <- str_split(x, ",")[[1]]
+  if (length(genes) > n) {
+    paste0(paste(genes[1:n], collapse = ", "), " ... (", length(genes), " total)")
+  } else {
+    paste(genes, collapse = ", ")
+  }
+}
+
+make_gsea_table <- function(df, title) {
+  df |>
+    mutate(
+      leadingEdge_symbol = map_chr(leadingEdge_symbol, truncate_leading_edge),
+      gene_set           = str_remove(gene_set, "^GOBP_") |>
+                           str_replace_all("_", " ") |>
+                           str_to_sentence(),
+      enrichment         = round(enrichment, 3),
+      p_value            = formatC(p_value,    format = "e", digits = 2),
+      fdr                = formatC(fdr,        format = "e", digits = 2),
+      fdr_global         = formatC(fdr_global, format = "e", digits = 2)
+    ) |>
+    select(gene_set, enrichment, p_value, fdr, fdr_global,
+           size, leadingEdge_symbol) |>
+    knitr::kable(format = "html", caption = title) |>
+    kableExtra::kable_styling(
+      bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+      full_width        = TRUE,
+      font_size         = 12
+    ) |>
+    cat()
+}
+
+render_cell_type_section <- function(ct, gsea_data, fdr_thr) {
+
+  sig_indiv  <- gsea_data |>
+    filter(cell_type == ct, fdr        < fdr_thr) |>
+    arrange(p_value)
+
+  sig_global <- gsea_data |>
+    filter(cell_type == ct, fdr_global < fdr_thr) |>
+    arrange(p_value)
+
+  cat("\n\n### ", ct, " {.tabset}\n\n")
+
+  cat("\n\n#### Within cell type FDR\n\n")
+  if (nrow(sig_indiv) == 0) {
+    cat("*No significant gene sets at FDR <", fdr_thr,
+        "within this cell type.*\n\n")
+  } else {
+    cat("**", nrow(sig_indiv), "gene sets significant at FDR <",
+        fdr_thr, "(within cell type)**\n\n")
+    make_gsea_table(
+      sig_indiv,
+      paste0(ct, " — Within cell type FDR < ", fdr_thr)
+    )
+    cat("\n\n")
+  }
+
+  cat("\n\n#### Global FDR\n\n")
+  if (nrow(sig_global) == 0) {
+    cat("*No significant gene sets at global FDR <", fdr_thr, ".*\n\n")
+  } else {
+    cat("**", nrow(sig_global), "gene sets significant at global FDR <",
+        fdr_thr, "**\n\n")
+    make_gsea_table(
+      sig_global,
+      paste0(ct, " — Global FDR < ", fdr_thr)
+    )
+    cat("\n\n")
+  }
+}
+```
+
+# Methods
+
+Polygenic risk scores (PRS) for schizophrenia were computed using PRS-CS-auto applied to the PGC3 European GWAS summary statistics (Trubetskoy et al., 2022) and scored against imputed genotype data from 118 European prenatal cerebral cortex samples. Per-sample PRS were standardised to mean 0, SD 1.
+
+PRS-expression associations were tested in pseudobulk gene expression data (quantile normalised) for 19 cell types (7 level 1, 12 level 2) using linear models fitted with limma. The model included sex, post-conceptional week (PCW), and the top 4 genotype principal components as covariates:
+
+$$\text{Expression} \sim \text{PRS} + \text{Sex} + \text{PCW} + \text{genPC}_{1-4}$$
+
+Gene set enrichment analysis was performed using fgsea (Korotkevich et al., 2021) on GO Biological Process gene sets (MSigDB C5, v2023.2). Gene sets were restricted to protein-coding genes and converted from gene symbols to Ensembl IDs. Genes were ranked by signed t-statistic from the limma model. Gene sets with fewer than `r params$min_gs_size` or more than `r params$max_gs_size` members were excluded. FDR correction was applied both within each cell type independently (Benjamini-Hochberg) and globally across all cell types and gene sets.
+
+---
+
+# Overview
+
+## Summary table
+
+```{r summary-table}
+summary_tbl <- gsea |>
+  group_by(cell_type, gs_category) |>
+  summarise(
+    n_tested   = n(),
+    n_fdr05    = sum(fdr        < fdr_thr, na.rm = TRUE),
+    n_fdr05_g  = sum(fdr_global < fdr_thr, na.rm = TRUE),
+    n_enriched = sum(fdr        < fdr_thr & enrichment > 0, na.rm = TRUE),
+    n_depleted = sum(fdr        < fdr_thr & enrichment < 0, na.rm = TRUE),
+    .groups    = "drop"
+  ) |>
+  mutate(level = ifelse(cell_type %in% l1_cell_types, "L1", "L2")) |>
+  arrange(level, cell_type)
+
+summary_tbl |>
+  select(-level) |>
+  gt() |>
+  tab_header(
+    title    = "GSEA results summary",
+    subtitle = paste0("GO Biological Process | FDR threshold: ", fdr_thr)
+  ) |>
+  cols_label(
+    cell_type   = "Cell Type",
+    gs_category = "Category",
+    n_tested    = "Tested",
+    n_fdr05     = "FDR < 0.05 (within)",
+    n_fdr05_g   = "FDR < 0.05 (global)",
+    n_enriched  = "Enriched",
+    n_depleted  = "Depleted"
+  ) |>
+  data_color(
+    columns = c(n_fdr05, n_fdr05_g),
+    method  = "numeric",
+    palette = c("white", "#1a9850")
+  ) |>
+  tab_style(
+    style     = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+  ) |>
+  tab_options(
+    row.striping.include_table_body = TRUE,
+    table.font.size = px(12)
+  )
+```
+
+## Figures {.tabset}
+
+### Bubble plot
+
+```{r fig-bubble, fig.cap="Bubble plot: number of significant gene sets per cell type. Size = n significant (within FDR), colour = proportion enriched vs depleted."}
+plot_df <- summary_tbl |>
+  mutate(
+    prop_enriched = ifelse(n_fdr05 > 0, n_enriched / n_fdr05, 0.5),
+    cell_type     = factor(cell_type,
+                           levels = c(l1_cell_types, sort(l2_cell_types)))
+  )
+
+ggplot(plot_df,
+       aes(x = gs_category, y = cell_type,
+           size = n_fdr05, colour = prop_enriched)) +
+  geom_point(alpha = 0.8) +
+  scale_size_continuous(
+    name   = "N significant\n(within FDR)",
+    range  = c(2, 14),
+    breaks = c(0, 25, 50, 100, 150)
+  ) +
+  scale_colour_gradient2(
+    name     = "Proportion\nenriched",
+    low      = "#4575b4",
+    mid      = "grey80",
+    high     = "#d73027",
+    midpoint = 0.5,
+    limits   = c(0, 1)
+  ) +
+  labs(
+    x        = NULL,
+    y        = NULL,
+    title    = "Significant GO:BP gene sets per cell type",
+    subtitle = paste0("Colour = proportion enriched (red) vs depleted (blue)",
+                      " | FDR < ", fdr_thr)
+  ) +
+  theme_bw(base_size = 12) +
+  theme(
+    panel.grid.major = element_line(colour = "grey90"),
+    axis.text.y      = element_text(size = 10),
+    legend.position  = "right"
+  )
+```
+
+### Bar chart
+
+```{r fig-barplot, fig.cap="Enriched and depleted gene sets per cell type (within cell type FDR)."}
+bar_df <- summary_tbl |>
+  mutate(
+    n_depleted_neg = -n_depleted,
+    cell_type      = factor(cell_type,
+                            levels = c(l1_cell_types, sort(l2_cell_types)))
+  ) |>
+  pivot_longer(
+    cols      = c(n_enriched, n_depleted_neg),
+    names_to  = "direction",
+    values_to = "n"
+  ) |>
+  mutate(direction = ifelse(direction == "n_enriched", "Enriched", "Depleted"))
+
+ggplot(bar_df, aes(x = cell_type, y = n, fill = direction)) +
+  geom_col() +
+  geom_hline(yintercept = 0, colour = "grey40", linewidth = 0.5) +
+  scale_fill_manual(
+    values = c("Enriched" = "#d73027", "Depleted" = "#4575b4")
+  ) +
+  labs(
+    x        = NULL,
+    y        = "Number of significant gene sets",
+    fill     = NULL,
+    title    = "Enriched vs depleted GO:BP gene sets per cell type",
+    subtitle = paste0("FDR < ", fdr_thr, " (within cell type)")
+  ) +
+  coord_flip() +
+  theme_bw(base_size = 12) +
+  theme(
+    panel.grid.major.y = element_blank(),
+    legend.position    = "top"
+  )
+```
+
+### Heatmap
+
+```{r fig-heatmap, fig.height=9, fig.cap="NES heatmap for top globally significant GO:BP gene sets across L1 cell types."}
+top_sets <- gsea |>
+  filter(cell_type %in% l1_cell_types, fdr_global < fdr_thr) |>
+  group_by(gene_set) |>
+  summarise(min_p = min(p_value), .groups = "drop") |>
+  slice_min(min_p, n = 30) |>
+  pull(gene_set)
+
+heatmap_df <- gsea |>
+  filter(cell_type %in% l1_cell_types, gene_set %in% top_sets) |>
+  select(cell_type, gene_set, enrichment) |>
+  mutate(
+    gene_set  = str_remove(gene_set, "^GOBP_") |>
+                str_replace_all("_", " ") |>
+                str_to_sentence() |>
+                str_trunc(55),
+    cell_type = factor(cell_type, levels = l1_cell_types)
+  )
+
+ggplot(heatmap_df,
+       aes(x = cell_type, y = gene_set, fill = enrichment)) +
+  geom_tile(colour = "white", linewidth = 0.3) +
+  scale_fill_gradient2(
+    name     = "NES",
+    low      = "#4575b4",
+    mid      = "white",
+    high     = "#d73027",
+    midpoint = 0,
+    na.value = "grey90"
+  ) +
+  labs(
+    x        = NULL,
+    y        = NULL,
+    title    = "Top globally significant GO:BP gene sets — L1 cell types",
+    subtitle = paste0("Top 30 by minimum p-value | global FDR < ", fdr_thr)
+  ) +
+  theme_bw(base_size = 11) +
+  theme(
+    axis.text.x     = element_text(angle = 45, hjust = 1),
+    axis.text.y     = element_text(size  = 9),
+    panel.grid      = element_blank(),
+    legend.position = "right"
+  )
+```
+
+# L1 Cell Types {.tabset}
+
+```{r l1-results, results='asis'}
+for (ct in l1_cell_types) {
+  render_cell_type_section(ct, gsea, fdr_thr)
+}
+```
+
+# L2 Cell Types {.tabset}
+
+```{r l2-results, results='asis'}
+for (ct in sort(l2_cell_types)) {
+  render_cell_type_section(ct, gsea, fdr_thr)
+}
+```
+
+# Session Info
+
+```{r session-info}
+sessionInfo()
+```
