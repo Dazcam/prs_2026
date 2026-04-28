@@ -1,3 +1,4 @@
+# Extract European samples from genotypes
 import pandas as pd
 import sys
 
