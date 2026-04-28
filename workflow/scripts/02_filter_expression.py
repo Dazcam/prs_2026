@@ -3,13 +3,14 @@
 Restrict pseudobulk expression matrix to European samples
 defined by the genotype fam file from stage 1.
 
-Input is TensorQTL format:
+Input (and output) expression file is in TensorQTL ready format:
   #Chr  start  end  TargetID  sample1  sample2  ...
 
 Inputs:
   1: expression file (TensorQTL bed format, optionally gzipped)
   2: PLINK fam file (defines which samples to keep)
-  3: output filtered expression TSV
+
+Output: filtered expression TSV
 """
 
 import sys
@@ -28,8 +29,8 @@ def parse_args():
     parser.add_argument('expression', help='TensorQTL format expression bed(.gz)')
     parser.add_argument('fam',        help='PLINK fam file defining target samples')
     parser.add_argument('output',     help='Output filtered expression TSV')
-    parser.add_argument('--min_samples', type=int, default=10,
-                        help='Minimum samples required (default: 10)')
+    parser.add_argument('--min_samples', type=int, default=118,
+                        help='Minimum samples required (default: 118)')
     return parser.parse_args()
 
 
