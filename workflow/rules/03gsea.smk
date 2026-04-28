@@ -60,7 +60,7 @@ rule render_gsea_report:
         """
 	Rscript -e '
           rmarkdown::render(
-            input	= "scripts/04_report_gsea.Rmd",
+            input	= "scripts/03_report_gsea.Rmd",
             output_file = normalizePath("{params.out_file}", mustWork = FALSE),
             params	= list(
               gsea_file  = "{params.gsea}",

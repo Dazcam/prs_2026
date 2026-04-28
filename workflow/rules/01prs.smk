@@ -3,7 +3,7 @@ rule extract_euro_samples:
     output: "../results/01PRS/euro_samples.txt"
     resources: time="10:00"
     log: "../results/00LOG/01PRS/extract_euro_samples.log"
-    script: "../scripts/prs_extract_euro_samples.py"
+    script: "../scripts/01_extract_euro_samples.py"
 
 rule restrict_to_euro:
     input: vcf = "../../eQTL_study_2025/results/04GENOTYPES-POST/filtered/chrALL_final.filt.vcf.gz",
@@ -42,7 +42,7 @@ rule format_gwas:
     input:  "../results/01PRS/scz_hg38_with_neff.tsv"
     output: "../results/01PRS/scz_hg38_prscs_ready.txt"
     log:    "../results/00LOG/01PRS/format_gwas_prscs.log"
-    shell:  "python scripts/prs_format_gwas.py {input} {output} > {log} 2>&1"
+    shell:  "python scripts/01_format_gwas.py {input} {output} > {log} 2>&1"
 
 rule run_prscs_auto:
     """
