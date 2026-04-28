@@ -1,4 +1,8 @@
-# Extract European samples from genotypes
+#!/usr/bin/env python3
+"""
+Extract European sample IDs from eQTL paper sample list.
+Output: single col txt file of sample IDs (no colname)
+"""
 import pandas as pd
 import sys
 
