@@ -7,6 +7,8 @@
 #     ensembl_gene_id, hgnc_symbol, chromosome_name,
 #     start_position, end_position, gene_biotype
 #
+#  Restrict to protein coding genes
+#
 #--------------------------------------------------------------------------------------
 
 args     <- commandArgs(trailingOnly = TRUE)
